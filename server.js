@@ -20,7 +20,7 @@ app.use(
 );
 
 // Puppeteer launch configuration for Render
-const browserConfig = {
+const browserConfig = await puppeteer.launch({
   headless: true,
   args: [
     '--no-sandbox',
@@ -28,10 +28,11 @@ const browserConfig = {
     '--disable-dev-shm-usage',
     '--single-process'
   ],
-  executablePath: isProduction 
-    ? process.env.PUPPETEER_EXECUTABLE_PATH 
-    : undefined
-};
+  executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || 
+    (process.platform === 'win32' 
+      ? 'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe' 
+      : '/usr/bin/chromium-browser')
+});
 
 // Helper functions
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));

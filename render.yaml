@@ -2,10 +2,13 @@ services:
   - type: web
     name: scrapper
     runtime: node
-    buildCommand: npm install
-    startCommand: ./start.sh
+    buildCommand: |
+      npm install
+      npm install puppeteer
+    startCommand: node server.js
     envVars:
-      - key: NODE_VERSION
-        value: 18.x
       - key: PUPPETEER_SKIP_CHROMIUM_DOWNLOAD
-        value: true
+        value: false
+      - key: NODE_ENV
+        value: production
+    plan: starter # Minimum plan that supports Puppeteer
