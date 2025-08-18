@@ -28,22 +28,19 @@ app.use(
 
 // Puppeteer launch configuration for Render
 
-const getBrowserConfig = () => {
-  // Universal configuration that works everywhere
-  return {
-    headless: isProduction ? 'new' : false,
-    args: [
-      '--no-sandbox',
-      '--disable-setuid-sandbox',
-      '--disable-dev-shm-usage',
-      '--single-process'
-    ],
-    // Let Puppeteer handle path detection automatically
-    executablePath: process.env.RENDER 
-      ? '/usr/bin/chromium-browser' // Render's system Chromium
-      : undefined // Auto-detect locally
-  };
-};
+const getBrowserConfig = () => ({
+  headless: 'new', // More stable than true/false
+  args: [
+    '--no-sandbox',
+    '--disable-setuid-sandbox',
+    '--disable-dev-shm-usage',
+    '--single-process'
+  ],
+  // Render's verified working path
+  executablePath: process.env.RENDER 
+    ? '/usr/bin/chromium-browser'
+    : puppeteer.executablePath() // Local dev
+});
 // Helper functions
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
