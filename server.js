@@ -28,7 +28,7 @@ app.use(
 // Puppeteer launch configuration for Render
 const getBrowserConfig = () => {
   // Default Chrome path for Render
-  const renderChromePath = '/opt/render/.cache/puppeteer/chrome/linux-139.0.7258.68/chrome-linux/chrome';
+  const renderChromePath = '/opt/render/.cache/puppeteer/chrome/linux-139.0.7258.68';
   
   return {
     headless: isProduction ? 'new' : false,
