@@ -28,19 +28,30 @@ app.use(
 
 // Puppeteer launch configuration for Render
 
-const getBrowserConfig = () => ({
-  headless: 'new', // More stable than true/false
-  args: [
-    '--no-sandbox',
-    '--disable-setuid-sandbox',
-    '--disable-dev-shm-usage',
-    '--single-process'
-  ],
-  // Render's verified working path
-  executablePath: process.env.RENDER 
-    ? '/usr/bin/chromium-browser'
-    : puppeteer.executablePath() // Local dev
-});
+const getBrowserConfig = () => {
+  // Debug: Verify Chromium exists
+  try {
+    console.log('Chromium info:', 
+      execSync('which chromium-browser && chromium-browser --version', { 
+        encoding: 'utf-8' 
+      })
+    );
+  } catch (e) {
+    console.error('Chromium check failed:', e.message);
+  }
+
+  return {
+    headless: 'new',
+    args: [
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+      '--disable-dev-shm-usage',
+      '--single-process'
+    ],
+    executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || 
+      (process.env.RENDER ? '/usr/bin/chromium-browser' : puppeteer.executablePath())
+  };
+};
 // Helper functions
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 

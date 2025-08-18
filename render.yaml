@@ -3,8 +3,19 @@ services:
     name: scrapper
     runtime: node
     buildCommand: |
-      sudo apt-get update
-      sudo apt-get install -y chromium-browser libnss3 libatk1.0-0 libatk-bridge2.0-0 libgbm1 libxshmfence1 libdrm2
+      # Force Chromium installation with dependencies
+      sudo apt-get update -y && \
+      sudo apt-get install -y --no-install-recommends \
+        chromium-browser \
+        libnss3 \
+        libatk1.0-0 \
+        libatk-bridge2.0-0 \
+        libgbm1 \
+        libxshmfence1 \
+        libdrm2
+      # Verify installation
+      which chromium-browser && chromium-browser --version
+      # Install Node dependencies
       npm install
     startCommand: node server.js
     envVars:
