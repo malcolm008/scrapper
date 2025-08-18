@@ -3,15 +3,16 @@ services:
     name: scrapper
     runtime: node
     buildCommand: |
-      export PUPPETEER_VERSION=$(node -p "require('puppeteer/package.json').version")
+      # Force specific Chrome version installation
+      export PUPPETEER_VERSION=21.7.0
       npm install
-      PUPPETEER_DOWNLOAD_HOST=https://storage.googleapis.com PUPPETEER_PRODUCT=chrome npm install puppeteer
+      PUPPETEER_DOWNLOAD_HOST=https://storage.googleapis.com npm install puppeteer@$PUPPETEER_VERSION
+      # Verify installation
+      ls -la /opt/render/.cache/puppeteer/chrome/
     startCommand: node server.js
     envVars:
       - key: PUPPETEER_SKIP_CHROMIUM_DOWNLOAD
         value: "false"
       - key: NODE_ENV
         value: production
-      - key: PUPPETEER_VERSION
-        value: "^24.16.2" # Match your package.json version
-    plan: starter # REQUIRED - free tier won't work
+    plan: starter # MUST be paid plan

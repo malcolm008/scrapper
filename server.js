@@ -4,7 +4,7 @@ import rateLimit from 'express-rate-limit';
 import cors from 'cors';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
-import { existsSync } from 'fs';
+import { execSync } from 'child_process';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -27,34 +27,24 @@ app.use(
 );
 
 // Puppeteer launch configuration for Render
+
 const getBrowserConfig = () => {
-  // Try all possible Render paths
-  const pathsToTry = [
-    '/opt/render/.cache/puppeteer/chrome/linux-*/chrome-linux64/chrome',
-    '/opt/render/.cache/puppeteer/chrome/linux-*/chrome-linux/chrome',
-    '/usr/bin/chromium-browser',
-    '/usr/bin/google-chrome-stable'
-  ];
-
-  // Find first existing path
-  let chromePath = pathsToTry.find(path => {
-    try {
-      const fullPath = path.includes('*') 
-        ? path.replace('linux-*', 'linux-' + process.env.PUPPETEER_VERSION || '139.0.7258.68')
-        : path;
-      return existsSync(fullPath);
-    } catch {
-      return false;
-    }
-  });
-
-  // Fallback to Puppeteer's detection
-  if (!chromePath) {
-    console.warn('No Chrome path found, falling back to Puppeteer detection');
-    chromePath = puppeteer.executablePath();
+  // 1. Try to find Chrome via system commands
+  let chromePath;
+  try {
+    chromePath = execSync('which google-chrome-stable || which chromium || which chromium-browser', { 
+      encoding: 'utf-8' 
+    }).trim();
+  } catch (e) {
+    console.warn('No system Chrome found:', e.message);
   }
 
-  console.log('Using Chrome at:', chromePath);
+  // 2. Fallback to Puppeteer's downloaded version
+  if (!chromePath) {
+    chromePath = '/opt/render/.cache/puppeteer/chrome/linux-*/chrome';
+    console.warn('Falling back to Puppeteer path:', chromePath);
+  }
+
   return {
     headless: 'new',
     args: [
