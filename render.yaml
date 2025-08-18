@@ -1,17 +1,17 @@
-# render.yaml
 services:
   - type: web
     name: scrapper
     runtime: node
     buildCommand: |
+      export PUPPETEER_VERSION=$(node -p "require('puppeteer/package.json').version")
       npm install
-      PUPPETEER_PRODUCT=chrome npm rebuild puppeteer
+      PUPPETEER_DOWNLOAD_HOST=https://storage.googleapis.com PUPPETEER_PRODUCT=chrome npm install puppeteer
     startCommand: node server.js
     envVars:
       - key: PUPPETEER_SKIP_CHROMIUM_DOWNLOAD
         value: "false"
-      - key: PUPPETEER_EXECUTABLE_PATH
-        value: "/opt/render/.cache/puppeteer/chrome/linux-*/chrome-linux64/chrome"
       - key: NODE_ENV
         value: production
+      - key: PUPPETEER_VERSION
+        value: "^24.16.2" # Match your package.json version
     plan: starter # REQUIRED - free tier won't work

@@ -28,23 +28,34 @@ app.use(
 
 // Puppeteer launch configuration for Render
 const getBrowserConfig = () => {
-  // All possible Render paths (updated for current Puppeteer versions)
-  const chromePaths = [
-    '/opt/render/.cache/puppeteer/chrome/linux-139.0.7258.68/chrome-linux64/chrome', // New path
-    '/opt/render/.cache/puppeteer/chrome/linux-139.0.7258.68/chrome-linux/chrome',   // Old path
-    '/opt/render/.cache/puppeteer/chrome/linux-139.0.7258.68',               // Fallback
+  // Try all possible Render paths
+  const pathsToTry = [
+    '/opt/render/.cache/puppeteer/chrome/linux-*/chrome-linux64/chrome',
+    '/opt/render/.cache/puppeteer/chrome/linux-*/chrome-linux/chrome',
     '/usr/bin/chromium-browser',
     '/usr/bin/google-chrome-stable'
   ];
 
-  // Debug: Log path checks
-  chromePaths.forEach(path => {
-    console.log(`Checking path: ${path} - Exists: ${existsSync(path)}`);
+  // Find first existing path
+  let chromePath = pathsToTry.find(path => {
+    try {
+      const fullPath = path.includes('*') 
+        ? path.replace('linux-*', 'linux-' + process.env.PUPPETEER_VERSION || '139.0.7258.68')
+        : path;
+      return existsSync(fullPath);
+    } catch {
+      return false;
+    }
   });
 
-  const chromePath = chromePaths.find(path => existsSync(path));
-  
-  const config = {
+  // Fallback to Puppeteer's detection
+  if (!chromePath) {
+    console.warn('No Chrome path found, falling back to Puppeteer detection');
+    chromePath = puppeteer.executablePath();
+  }
+
+  console.log('Using Chrome at:', chromePath);
+  return {
     headless: 'new',
     args: [
       '--no-sandbox',
@@ -52,13 +63,8 @@ const getBrowserConfig = () => {
       '--disable-dev-shm-usage',
       '--single-process'
     ],
-    executablePath: process.env.RENDER
-      ? chromePath || puppeteer.executablePath()
-      : puppeteer.executablePath()
+    executablePath: chromePath
   };
-
-  console.log('Final browser config:', config);
-  return config;
 };
 // Helper functions
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
