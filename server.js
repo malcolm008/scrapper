@@ -32,7 +32,7 @@ const getBrowserConfig = () => {
   const chromePaths = [
     '/opt/render/.cache/puppeteer/chrome/linux-139.0.7258.68/chrome-linux64/chrome', // New path
     '/opt/render/.cache/puppeteer/chrome/linux-139.0.7258.68/chrome-linux/chrome',   // Old path
-    '/opt/render/.cache/puppeteer/chrome/linux-139.0.7258.68/chrome',               // Fallback
+    '/opt/render/.cache/puppeteer/chrome/linux-139.0.7258.68',               // Fallback
     '/usr/bin/chromium-browser',
     '/usr/bin/google-chrome-stable'
   ];
