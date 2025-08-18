@@ -3,16 +3,10 @@ services:
     name: scrapper
     runtime: node
     buildCommand: |
-      # Force specific Chrome version installation
-      export PUPPETEER_VERSION=21.7.0
       npm install
-      PUPPETEER_DOWNLOAD_HOST=https://storage.googleapis.com npm install puppeteer@$PUPPETEER_VERSION
-      # Verify installation
-      ls -la /opt/render/.cache/puppeteer/chrome/
+      sudo apt-get update && sudo apt-get install -y chromium-browser
     startCommand: node server.js
     envVars:
-      - key: PUPPETEER_SKIP_CHROMIUM_DOWNLOAD
-        value: "false"
       - key: NODE_ENV
         value: production
-    plan: starter # MUST be paid plan
+    plan: starter # Must be paid plan

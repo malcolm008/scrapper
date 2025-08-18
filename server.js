@@ -29,31 +29,19 @@ app.use(
 // Puppeteer launch configuration for Render
 
 const getBrowserConfig = () => {
-  // 1. Try to find Chrome via system commands
-  let chromePath;
-  try {
-    chromePath = execSync('which google-chrome-stable || which chromium || which chromium-browser', { 
-      encoding: 'utf-8' 
-    }).trim();
-  } catch (e) {
-    console.warn('No system Chrome found:', e.message);
-  }
-
-  // 2. Fallback to Puppeteer's downloaded version
-  if (!chromePath) {
-    chromePath = '/opt/render/.cache/puppeteer/chrome/linux-*/chrome';
-    console.warn('Falling back to Puppeteer path:', chromePath);
-  }
-
+  // Universal configuration that works everywhere
   return {
-    headless: 'new',
+    headless: isProduction ? 'new' : false,
     args: [
       '--no-sandbox',
       '--disable-setuid-sandbox',
       '--disable-dev-shm-usage',
       '--single-process'
     ],
-    executablePath: chromePath
+    // Let Puppeteer handle path detection automatically
+    executablePath: process.env.RENDER 
+      ? '/usr/bin/chromium-browser' // Render's system Chromium
+      : undefined // Auto-detect locally
   };
 };
 // Helper functions
