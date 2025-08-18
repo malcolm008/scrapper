@@ -29,17 +29,9 @@ app.use(
 // Puppeteer launch configuration for Render
 
 const getBrowserConfig = () => {
-  // Debug: Verify Chromium exists
-  try {
-    console.log('Chromium info:', 
-      execSync('which chromium-browser && chromium-browser --version', { 
-        encoding: 'utf-8' 
-      })
-    );
-  } catch (e) {
-    console.error('Chromium check failed:', e.message);
-  }
-
+  // Use the EXACT path from your logs
+  const renderChromePath = '/opt/render/.cache/puppeteer/chrome/linux-139.0.7258.68/chrome-linux64/chrome';
+  
   return {
     headless: 'new',
     args: [
@@ -48,10 +40,14 @@ const getBrowserConfig = () => {
       '--disable-dev-shm-usage',
       '--single-process'
     ],
-    executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || 
-      (process.env.RENDER ? '/usr/bin/chromium-browser' : puppeteer.executablePath())
+    executablePath: process.env.RENDER
+      ? renderChromePath
+      : puppeteer.executablePath() // Local development
   };
+
+  
 };
+
 // Helper functions
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 

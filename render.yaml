@@ -2,25 +2,11 @@ services:
   - type: web
     name: scrapper
     runtime: node
-    buildCommand: |
-      # Force Chromium installation with dependencies
-      sudo apt-get update -y && \
-      sudo apt-get install -y --no-install-recommends \
-        chromium-browser \
-        libnss3 \
-        libatk1.0-0 \
-        libatk-bridge2.0-0 \
-        libgbm1 \
-        libxshmfence1 \
-        libdrm2
-      # Verify installation
-      which chromium-browser && chromium-browser --version
-      # Install Node dependencies
-      npm install
+    buildCommand: npm install
     startCommand: node server.js
     envVars:
-      - key: PUPPETEER_EXECUTABLE_PATH
-        value: "/usr/bin/chromium-browser"
+      - key: PUPPETEER_SKIP_CHROMIUM_DOWNLOAD
+        value: "false"
       - key: NODE_ENV
         value: production
     plan: starter
