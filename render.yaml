@@ -10,6 +10,8 @@ services:
     envVars:
       - key: PUPPETEER_SKIP_CHROMIUM_DOWNLOAD
         value: "false"
+      - key: PUPPETEER_EXECUTABLE_PATH
+        value: "/opt/render/.cache/puppeteer/chrome/linux-*/chrome-linux64/chrome"
       - key: NODE_ENV
         value: production
     plan: starter # REQUIRED - free tier won't work

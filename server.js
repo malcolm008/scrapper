@@ -28,18 +28,23 @@ app.use(
 
 // Puppeteer launch configuration for Render
 const getBrowserConfig = () => {
-  // Try multiple possible Chrome paths
+  // All possible Render paths (updated for current Puppeteer versions)
   const chromePaths = [
-    '/opt/render/.cache/puppeteer/chrome/linux-139.0.7258.68/chrome-linux/chrome',
-    '/opt/render/.cache/puppeteer/chrome/linux-139.0.7258.68/chrome',
+    '/opt/render/.cache/puppeteer/chrome/linux-139.0.7258.68/chrome-linux64/chrome', // New path
+    '/opt/render/.cache/puppeteer/chrome/linux-139.0.7258.68/chrome-linux/chrome',   // Old path
+    '/opt/render/.cache/puppeteer/chrome/linux-139.0.7258.68/chrome',               // Fallback
     '/usr/bin/chromium-browser',
     '/usr/bin/google-chrome-stable'
   ];
 
-  // Find first existing path
-  const chromePath = chromePaths.find(path => existsSync(path));
+  // Debug: Log path checks
+  chromePaths.forEach(path => {
+    console.log(`Checking path: ${path} - Exists: ${existsSync(path)}`);
+  });
 
-  return {
+  const chromePath = chromePaths.find(path => existsSync(path));
+  
+  const config = {
     headless: 'new',
     args: [
       '--no-sandbox',
@@ -48,9 +53,12 @@ const getBrowserConfig = () => {
       '--single-process'
     ],
     executablePath: process.env.RENDER
-      ? chromePath || puppeteer.executablePath() // Fallback to Puppeteer's detection
-      : puppeteer.executablePath() // Local development
+      ? chromePath || puppeteer.executablePath()
+      : puppeteer.executablePath()
   };
+
+  console.log('Final browser config:', config);
+  return config;
 };
 // Helper functions
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
