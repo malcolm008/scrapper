@@ -30,7 +30,7 @@ app.use(
 
 const getBrowserConfig = () => {
   // Use the EXACT path from your logs
-  const renderChromePath = '/opt/render/.cache/puppeteer/chrome/linux-139.0.7258.68/chrome';
+  const renderChromePath = '/opt/render/.cache/puppeteer/chrome/linux-139.0.7258.68';
   
   return {
     headless: 'new',
