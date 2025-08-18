@@ -4,7 +4,7 @@ import rateLimit from 'express-rate-limit';
 import cors from 'cors';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
-import fs from 'fs';
+
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -25,16 +25,6 @@ app.use(
     message: 'Too many requests, please try again later'
   })
 );
-
-const checkPaths = [
-  '/opt/render/.cache/puppeteer/chrome/linux-139.0.7258.68/chrome-linux/chrome',
-  '/opt/render/.cache/puppeteer/chrome/linux-139.0.7258.68/chrome',
-  '/usr/bin/chromium-browser'
-];
-
-checkPaths.forEach(path => {
-  console.log(`${path} exists: ${fs.existsSync(path)}`);
-});
 
 // Puppeteer launch configuration for Render
 const getBrowserConfig = () => {
