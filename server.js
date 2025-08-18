@@ -4,7 +4,7 @@ import rateLimit from 'express-rate-limit';
 import cors from 'cors';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
-
+import { existsSync } from 'fs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -28,25 +28,28 @@ app.use(
 
 // Puppeteer launch configuration for Render
 const getBrowserConfig = () => {
-  // Render-specific paths (confirmed working)
-  const renderPaths = [
-    '/opt/render/.cache/puppeteer/chrome/linux-*/chrome-linux/chrome',
-    '/opt/render/.cache/puppeteer/chrome/linux-*/chrome',
-    '/opt/render/.cache/puppeteer/chrome/linux-*/chrome-linux/chrome.exe'
+  // Try multiple possible Chrome paths
+  const chromePaths = [
+    '/opt/render/.cache/puppeteer/chrome/linux-139.0.7258.68/chrome-linux/chrome',
+    '/opt/render/.cache/puppeteer/chrome/linux-139.0.7258.68/chrome',
+    '/usr/bin/chromium-browser',
+    '/usr/bin/google-chrome-stable'
   ];
+
+  // Find first existing path
+  const chromePath = chromePaths.find(path => existsSync(path));
 
   return {
     headless: 'new',
     args: [
       '--no-sandbox',
-      '--disable-setuid-sandbox', 
+      '--disable-setuid-sandbox',
       '--disable-dev-shm-usage',
       '--single-process'
     ],
     executablePath: process.env.RENDER
-      ? renderPaths.find(path => require('fs').existsSync(path.replace('*', '139.0.7258.68'))) || 
-        '/usr/bin/chromium-browser'
-      : puppeteer.executablePath()
+      ? chromePath || puppeteer.executablePath() // Fallback to Puppeteer's detection
+      : puppeteer.executablePath() // Local development
   };
 };
 // Helper functions
