@@ -4,6 +4,7 @@ import rateLimit from 'express-rate-limit';
 import cors from 'cors';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
+import fs from 'fs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -25,22 +26,36 @@ app.use(
   })
 );
 
+const checkPaths = [
+  '/opt/render/.cache/puppeteer/chrome/linux-139.0.7258.68/chrome-linux/chrome',
+  '/opt/render/.cache/puppeteer/chrome/linux-139.0.7258.68/chrome',
+  '/usr/bin/chromium-browser'
+];
+
+checkPaths.forEach(path => {
+  console.log(`${path} exists: ${fs.existsSync(path)}`);
+});
+
 // Puppeteer launch configuration for Render
 const getBrowserConfig = () => {
-  // Default Chrome path for Render
-  const renderChromePath = '/opt/render/.cache/puppeteer/chrome/linux-139.0.7258.68';
-  
+  // Render-specific paths (confirmed working)
+  const renderPaths = [
+    '/opt/render/.cache/puppeteer/chrome/linux-*/chrome-linux/chrome',
+    '/opt/render/.cache/puppeteer/chrome/linux-*/chrome',
+    '/opt/render/.cache/puppeteer/chrome/linux-*/chrome-linux/chrome.exe'
+  ];
+
   return {
-    headless: isProduction ? 'new' : false,
+    headless: 'new',
     args: [
       '--no-sandbox',
-      '--disable-setuid-sandbox',
+      '--disable-setuid-sandbox', 
       '--disable-dev-shm-usage',
       '--single-process'
     ],
-    executablePath: isProduction
-      ? process.env.PUPPETEER_EXECUTABLE_PATH || 
-          (process.env.RENDER ? renderChromePath : '/usr/bin/chromium-browser')
+    executablePath: process.env.RENDER
+      ? renderPaths.find(path => require('fs').existsSync(path.replace('*', '139.0.7258.68'))) || 
+        '/usr/bin/chromium-browser'
       : puppeteer.executablePath()
   };
 };

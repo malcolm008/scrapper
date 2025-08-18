@@ -1,14 +1,15 @@
+# render.yaml
 services:
   - type: web
     name: scrapper
     runtime: node
     buildCommand: |
       npm install
-      npm install puppeteer
+      PUPPETEER_PRODUCT=chrome npm rebuild puppeteer
     startCommand: node server.js
     envVars:
       - key: PUPPETEER_SKIP_CHROMIUM_DOWNLOAD
-        value: false
+        value: "false"
       - key: NODE_ENV
         value: production
-    plan: starter # Minimum plan that supports Puppeteer
+    plan: starter # REQUIRED - free tier won't work
