@@ -26,19 +26,24 @@ app.use(
 );
 
 // Puppeteer launch configuration for Render
-const getBrowserConfig = () => ({
-  headless: isProduction ? 'new' : false,
-  args: [
-    '--no-sandbox',
-    '--disable-setuid-sandbox',
-    '--disable-dev-shm-usage',
-    '--single-process'
-  ],
-  executablePath: isProduction
-    ? process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/chromium-browser'
-    : puppeteer.executablePath()
-});
-
+const getBrowserConfig = () => {
+  // Default Chrome path for Render
+  const renderChromePath = '/opt/render/.cache/puppeteer/chrome/linux-*/chrome-linux/chrome';
+  
+  return {
+    headless: isProduction ? 'new' : false,
+    args: [
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+      '--disable-dev-shm-usage',
+      '--single-process'
+    ],
+    executablePath: isProduction
+      ? process.env.PUPPETEER_EXECUTABLE_PATH || 
+          (process.env.RENDER ? renderChromePath : '/usr/bin/chromium-browser')
+      : puppeteer.executablePath()
+  };
+};
 // Helper functions
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
