@@ -29,8 +29,10 @@ app.use(
 // Puppeteer launch configuration for Render
 
 const getBrowserConfig = () => {
-  // Use the EXACT path from your logs
-  const renderChromePath = '/opt/render/.cache/puppeteer/chrome/linux-139.0.7258.68';
+  // Use Render's provided Chrome path
+  const renderChromePath = process.env.RENDER 
+    ? '/usr/bin/chromium-browser' 
+    : puppeteer.executablePath();
   
   return {
     headless: 'new',
@@ -38,14 +40,12 @@ const getBrowserConfig = () => {
       '--no-sandbox',
       '--disable-setuid-sandbox',
       '--disable-dev-shm-usage',
-      '--single-process'
+      '--disable-gpu',
+      '--single-process',
+      '--no-zygote'
     ],
-    executablePath: process.env.RENDER
-      ? renderChromePath
-      : puppeteer.executablePath() // Local development
+    executablePath: renderChromePath
   };
-
-  
 };
 
 // Helper functions

@@ -2,11 +2,16 @@ services:
   - type: web
     name: scrapper
     runtime: node
-    buildCommand: npm install
+    buildCommand: 
+      - curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.5/install.sh | bash
+      - export NVM_DIR="$HOME/.nvm"
+      - [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+      - nvm install 18
+      - npm install
     startCommand: node server.js
     envVars:
       - key: PUPPETEER_SKIP_CHROMIUM_DOWNLOAD
-        value: "false"
+        value: "true"
       - key: NODE_ENV
         value: production
     plan: starter
