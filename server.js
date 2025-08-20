@@ -28,65 +28,17 @@ app.use(
 );
 
 // Function to find Chrome executable
-// Function to find Chrome executable
+
 const findChromeExecutable = () => {
   if (!isRender) {
-    return puppeteer.executablePath(); // Use default for local development
+    return puppeteer.executablePath();
   }
 
-  console.log('Running on Render - searching for Chrome executable...');
+  // Use the chrome-headless-shell that we know exists
+  const headlessShellPath = '/opt/render/.cache/puppeteer/chrome-headless-shell/linux-139.0.7258.6/chrome-headless-shell';
+  console.log(`Using chrome-headless-shell: ${headlessShellPath}`);
   
-  // Common Chrome paths on Render/Linux
-  const possiblePaths = [
-    '/opt/render/.cache/puppeteer/chrome/linux-*/chrome-linux64/chrome', // Correct path pattern
-    '/opt/render/.cache/puppeteer/chrome/linux-*/chrome', // Alternative pattern
-    '/usr/bin/chromium-browser', // Common Chromium path
-    '/usr/bin/google-chrome', // Common Chrome path
-    '/usr/bin/chrome', // Alternative Chrome path
-    process.env.CHROME_PATH // Environment variable override
-  ].filter(Boolean);
-
-  console.log('Looking for Chrome executable at paths:', possiblePaths);
-
-  for (const pathPattern of possiblePaths) {
-    try {
-      // Handle wildcards in paths
-      if (pathPattern.includes('*')) {
-        // Use find command to locate files matching pattern
-        const findCommand = `find ${pathPattern.split('*')[0]} -name "${pathPattern.split('/').pop().replace('*', '*')}" -type f 2>/dev/null | head -1`;
-        console.log(`Running find command: ${findCommand}`);
-        
-        const foundPath = execSync(findCommand).toString().trim();
-        if (foundPath) {
-          console.log(`Found Chrome at: ${foundPath}`);
-          // Verify it's executable
-          execSync(`test -x "${foundPath}"`);
-          return foundPath;
-        }
-      } else {
-        // Check if specific path exists and is executable
-        console.log(`Testing path: ${pathPattern}`);
-        execSync(`test -x "${pathPattern}"`);
-        console.log(`Found Chrome at: ${pathPattern}`);
-        return pathPattern;
-      }
-    } catch (error) {
-      console.log(`Chrome not found at: ${pathPattern}`);
-      // Continue to next path
-    }
-  }
-
-  // Last resort: try to use the puppeteer executable path
-  try {
-    const puppeteerPath = puppeteer.executablePath();
-    console.log(`Trying puppeteer executable path: ${puppeteerPath}`);
-    execSync(`test -x "${puppeteerPath}"`);
-    return puppeteerPath;
-  } catch (error) {
-    console.log(`Puppeteer path also failed: ${puppeteerPath}`);
-  }
-
-  throw new Error('Could not find Chrome executable in any known location');
+  return headlessShellPath;
 };
 
 // Puppeteer launch configuration
