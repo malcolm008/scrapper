@@ -91,9 +91,16 @@ const findChromeExecutable = () => {
 
 // Puppeteer launch configuration
 const getBrowserConfig = () => {
-  const executablePath = findChromeExecutable();
+  let executablePath;
   
-  console.log(`Using Chrome executable: ${executablePath}`);
+  try {
+    executablePath = findChromeExecutable();
+    console.log(`Using Chrome executable: ${executablePath}`);
+  } catch (error) {
+    console.error('Failed to find Chrome executable, using default:', error.message);
+    executablePath = puppeteer.executablePath();
+    console.log(`Falling back to default: ${executablePath}`);
+  }
   
   return {
     headless: 'new',
