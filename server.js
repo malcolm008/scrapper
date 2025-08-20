@@ -27,79 +27,17 @@ app.use(
 );
 
 // Puppeteer launch configuration for Render
-// Function to find Chrome executable
-const findChromeExecutable = () => {
-  if (!isRender) {
-    return puppeteer.executablePath(); // Use default for local development
-  }
-
-  console.log('Running on Render - searching for Chrome executable...');
-  
-  // Based on your Windows path structure, try these patterns
-  const possiblePaths = [
-    // Pattern from your Windows installation
-    '/opt/render/.cache/puppeteer/chrome/linux-139.0.7258.68/chrome-linux64/chrome',
-    
-    // Alternative patterns that might work
-    '/opt/render/.cache/puppeteer/chrome/linux-139.0.7258.68/chrome',
-    '/opt/render/.cache/puppeteer/chrome/linux-139.0.7258.68/**/chrome',
-    
-    // From the logs: chrome-headless-shell is downloaded and might work
-    '/opt/render/.cache/puppeteer/chrome-headless-shell/linux-139.0.7258.6/chrome-headless-shell',
-    
-    // System browsers as fallback
-    '/usr/bin/chromium-browser',
-    '/usr/bin/google-chrome'
-  ];
-
-  for (const path of possiblePaths) {
-    try {
-      if (path.includes('**')) {
-        // Handle double wildcard pattern
-        const baseDir = path.split('**')[0];
-        const findCommand = `find ${baseDir} -name "chrome" -type f -executable 2>/dev/null | head -1`;
-        console.log(`Running find command: ${findCommand}`);
-        
-        const foundPath = execSync(findCommand).toString().trim();
-        if (foundPath) {
-          console.log(`Found Chrome at: ${foundPath}`);
-          return foundPath;
-        }
-      } else {
-        console.log(`Testing path: ${path}`);
-        execSync(`test -x "${path}"`);
-        console.log(`Using Chrome at: ${path}`);
-        return path;
-      }
-    } catch (error) {
-      console.log(`Not found: ${path}`);
-    }
-  }
-
-  // Final fallback - use puppeteer's detection
-  try {
-    const fallbackPath = puppeteer.executablePath();
-    console.log(`Trying puppeteer's path: ${fallbackPath}`);
-    execSync(`test -x "${fallbackPath}"`);
-    return fallbackPath;
-  } catch (error) {
-    console.log(`Puppeteer path also failed: ${error.message}`);
-    throw new Error('Could not find Chrome executable in any known location');
-  }
-};
 
 const getBrowserConfig = () => {
-  const executablePath = findChromeExecutable();
-  
   return {
-    headless: false, // Important: chrome-headless-shell needs this to be false
+    headless: 'new', // Use new headless mode
     args: [
       '--no-sandbox',
       '--disable-setuid-sandbox',
       '--disable-dev-shm-usage',
-    ],
-    executablePath,
-    timeout: 60000
+      '--single-process'
+    ]
+    // NO executablePath - let Puppeteer auto-detect it!
   };
 };
 
@@ -154,12 +92,17 @@ app.get('/scrape-options', async (req, res) => {
   let browser;
   try {
     const { makeId, modelId, yearId, countryId, fuelId } = req.query;
-    browser = await puppeteer.launch(getBrowserConfig());
-    const page = await browser.newPage();
+    console.log('Launching browser with auto-detected path...');
+    const browserConfig = getBrowserConfig();
+    browser = await puppeteer.launch(browserConfig);
+    
+    console.log('Browser launched successfully at:', await browser.version());
 
+    const page = await browser.newPage();
     await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36');
     await page.setDefaultNavigationTimeout(120000); // 2 minutes timeout
 
+    console.log('Navigating to target website...');
     await page.goto('https://umvvs.tra.go.tz/', {
       waitUntil: 'domcontentloaded',
       timeout: 60000
@@ -216,11 +159,20 @@ app.get('/scrape-options', async (req, res) => {
     res.status(500).json({
       error: 'Scraping failed',
       details: error.message,
-      suggestion: isProduction 
-        ? 'Try again later or contact support' 
-        : 'Try running with headless: false for debugging',
       timestamp: new Date().toISOString()
     });
+  }
+});
+
+app.get('/debug-puppeteer', async (req, res) => {
+  try {
+    res.json({
+      executablePath: puppeteer.executablePath(),
+      defaultArgs: puppeteer.defaultArgs(),
+      product: puppeteer.product()
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
   }
 });
 
@@ -229,8 +181,8 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`
   Server running in ${isProduction ? 'production' : 'development'} mode
   Port: ${PORT}
-  Puppeteer executable: ${getBrowserConfig().executablePath}
   `);
+  console.log('Puppeteer executablePath:', puppeteer.executablePath());
 });
 
 // Process handlers

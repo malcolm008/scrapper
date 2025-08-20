@@ -6,9 +6,7 @@ services:
     startCommand: node server.js
     envVars:
       - key: PUPPETEER_SKIP_CHROMIUM_DOWNLOAD
-        value: "false"
+        value: "false"  # This is correct - it ensures Chrome is downloaded
       - key: NODE_ENV
         value: production
-      - key: RENDER
-        value: "true"
     plan: starter
