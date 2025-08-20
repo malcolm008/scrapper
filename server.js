@@ -167,6 +167,59 @@ app.get('/health', (req, res) => {
   });
 });
 
+// Diagnostic endpoint to find Chrome
+app.get('/diagnose', async (req, res) => {
+  try {
+    // 1. Check what puppeteer thinks the path should be
+    const puppeteerPath = puppeteer.executablePath();
+    
+    // 2. Search the entire filesystem for chrome/chromium
+    const findCommands = [
+      'find / -name "chrome" -type f -executable 2>/dev/null | head -10',
+      'find / -name "chromium" -type f -executable 2>/dev/null | head -10',
+      'find / -name "chromium-browser" -type f -executable 2>/dev/null | head -10',
+      'find / -name "*chrome*" -type f -executable 2>/dev/null | grep -v "\.so" | head -20',
+      'ls -la /opt/render/.cache/puppeteer/ 2>/dev/null || echo "No puppeteer cache"',
+      'ls -la /opt/render/.cache/puppeteer/*/ 2>/dev/null || echo "No version directories"',
+      'which chromium-browser 2>/dev/null || echo "chromium-browser not in PATH"',
+      'which google-chrome 2>/dev/null || echo "google-chrome not in PATH"'
+    ];
+    
+    const results = {};
+    
+    for (const cmd of findCommands) {
+      try {
+        results[cmd] = execSync(cmd).toString().trim();
+      } catch (e) {
+        results[cmd] = `Error: ${e.message}`;
+      }
+    }
+    
+    // 3. Check if puppeteer's path exists
+    let puppeteerPathExists = 'Unknown';
+    try {
+      execSync(`test -x "${puppeteerPath}"`);
+      puppeteerPathExists = 'YES - exists and is executable';
+    } catch (e) {
+      puppeteerPathExists = `NO - ${e.message}`;
+    }
+    
+    res.json({
+      puppeteerExpectedPath: puppeteerPath,
+      puppeteerPathExists: puppeteerPathExists,
+      systemInfo: {
+        platform: process.platform,
+        arch: process.arch,
+        // Add any other relevant system info
+      },
+      fileSearchResults: results
+    });
+    
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Debug endpoint to check Chrome installation
 app.get('/debug/chrome', async (req, res) => {
   try {
