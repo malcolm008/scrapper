@@ -2,16 +2,8 @@ import express from 'express';
 import puppeteer from 'puppeteer';
 import rateLimit from 'express-rate-limit';
 import cors from 'cors';
-import { fileURLToPath } from 'url';
-import { dirname } from 'path';
-import { execSync } from 'child_process';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
 
 const app = express();
-
-// Environment configuration
 const PORT = process.env.PORT || 3000;
 const isProduction = process.env.NODE_ENV === 'production';
 
@@ -20,24 +12,24 @@ app.use(cors());
 app.use(express.json());
 app.use(
   rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 100, // limit each IP to 100 requests per window
+    windowMs: 15 * 60 * 1000,
+    max: 100,
     message: 'Too many requests, please try again later'
   })
 );
 
-// Puppeteer launch configuration for Render
-
+// Firefox browser config
 const getBrowserConfig = () => {
   return {
-    headless: 'new', // Use new headless mode
+    headless: true,
+    product: 'firefox', // Explicitly use Firefox
     args: [
       '--no-sandbox',
       '--disable-setuid-sandbox',
-      '--disable-dev-shm-usage',
-      '--single-process'
-    ]
-    // NO executablePath - let Puppeteer auto-detect it!
+      '--disable-dev-shm-usage'
+    ],
+    // Let Puppeteer auto-detect the Firefox path
+    timeout: 60000
   };
 };
 
@@ -83,8 +75,29 @@ const getSelectOptions = async (page, selector) => {
 app.get('/health', (req, res) => {
   res.status(200).json({ 
     status: 'healthy',
-    environment: isProduction ? 'production' : 'development'
+    environment: isProduction ? 'production' : 'development',
+    browser: 'firefox'
   });
+});
+
+// Debug endpoint to check Firefox installation
+app.get('/debug/firefox', async (req, res) => {
+  try {
+    const executablePath = puppeteer.executablePath();
+    
+    res.json({
+      executablePath,
+      product: puppeteer.product,
+      defaultArgs: puppeteer.defaultArgs(),
+      environment: {
+        PUPPETEER_PRODUCT: process.env.PUPPETEER_PRODUCT,
+        PUPPETEER_FIREFOX_SKIP_DOWNLOAD: process.env.PUPPETEER_FIREFOX_SKIP_DOWNLOAD,
+        PUPPETEER_SKIP_CHROMIUM_DOWNLOAD: process.env.PUPPETEER_SKIP_CHROMIUM_DOWNLOAD
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 // Main scraping endpoint
@@ -92,15 +105,17 @@ app.get('/scrape-options', async (req, res) => {
   let browser;
   try {
     const { makeId, modelId, yearId, countryId, fuelId } = req.query;
-    console.log('Launching browser with auto-detected path...');
+    
+    console.log('Launching Firefox browser...');
     const browserConfig = getBrowserConfig();
     browser = await puppeteer.launch(browserConfig);
     
-    console.log('Browser launched successfully at:', await browser.version());
-
+    console.log('Firefox browser launched successfully');
     const page = await browser.newPage();
-    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36');
-    await page.setDefaultNavigationTimeout(120000); // 2 minutes timeout
+
+    // Use Firefox user agent
+    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/117.0');
+    await page.setDefaultNavigationTimeout(120000);
 
     console.log('Navigating to target website...');
     await page.goto('https://umvvs.tra.go.tz/', {
@@ -164,25 +179,17 @@ app.get('/scrape-options', async (req, res) => {
   }
 });
 
-app.get('/debug-puppeteer', async (req, res) => {
-  try {
-    res.json({
-      executablePath: puppeteer.executablePath(),
-      defaultArgs: puppeteer.defaultArgs(),
-      product: puppeteer.product()
-    });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
 // Start server
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`
   Server running in ${isProduction ? 'production' : 'development'} mode
   Port: ${PORT}
+  Browser: Firefox
   `);
-  console.log('Puppeteer executablePath:', puppeteer.executablePath());
+  
+  // Log Puppeteer configuration
+  console.log('Puppeteer product:', puppeteer.product);
+  console.log('Puppeteer executable path:', puppeteer.executablePath());
 });
 
 // Process handlers
