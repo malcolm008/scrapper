@@ -14,7 +14,6 @@ const app = express();
 // Environment configuration
 const PORT = process.env.PORT || 3000;
 const isProduction = process.env.NODE_ENV === 'production';
-const isRender = process.env.RENDER === 'true';
 
 // Middleware
 app.use(cors());
@@ -27,49 +26,30 @@ app.use(
   })
 );
 
-// Function to find Chrome executable
+// Puppeteer launch configuration for Render
 
-const findChromeExecutable = () => {
-  if (!isRender) {
-    return puppeteer.executablePath();
+const getBrowserConfig = async () => {
+  const isRender = process.env.RENDER;
+  
+  if (isRender) {
+    return {
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-gpu',
+        '--single-process'
+      ],
+      executablePath: '/usr/bin/chromium-browser',
+      headless: 'new'
+    };
+  } else {
+    return {
+      args: chromium.args,
+      executablePath: await chromium.executablePath,
+      headless: chromium.headless
+    };
   }
-
-  // Use the chrome-headless-shell that we know exists
-  const headlessShellPath = '/opt/render/.cache/puppeteer/chrome-headless-shell/linux-139.0.7258.6/chrome-headless-shell';
-  console.log(`Using chrome-headless-shell: ${headlessShellPath}`);
-  
-  return headlessShellPath;
-};
-
-// Puppeteer launch configuration
-const getBrowserConfig = () => {
-  let executablePath;
-  
-  try {
-    executablePath = findChromeExecutable();
-    console.log(`Using Chrome executable: ${executablePath}`);
-  } catch (error) {
-    console.error('Failed to find Chrome executable, using default:', error.message);
-    executablePath = puppeteer.executablePath();
-    console.log(`Falling back to default: ${executablePath}`);
-  }
-  
-  return {
-    headless: 'new',
-    args: [
-      '--no-sandbox',
-      '--disable-setuid-sandbox',
-      '--disable-dev-shm-usage',
-      '--disable-gpu',
-      '--single-process',
-      '--no-zygote',
-      '--disable-setuid-sandbox',
-      '--disable-web-security',
-      '--disable-features=VizDisplayCompositor'
-    ],
-    executablePath,
-    timeout: 60000
-  };
 };
 
 // Helper functions
@@ -114,138 +94,8 @@ const getSelectOptions = async (page, selector) => {
 app.get('/health', (req, res) => {
   res.status(200).json({ 
     status: 'healthy',
-    environment: isProduction ? 'production' : 'development',
-    isRender: isRender
+    environment: isProduction ? 'production' : 'development'
   });
-});
-
-// Diagnostic endpoint to find Chrome
-app.get('/diagnose', async (req, res) => {
-  try {
-    // 1. Check what puppeteer thinks the path should be
-    const puppeteerPath = puppeteer.executablePath();
-    
-    // 2. Search the entire filesystem for chrome/chromium
-    const findCommands = [
-      'find / -name "chrome" -type f -executable 2>/dev/null | head -10',
-      'find / -name "chromium" -type f -executable 2>/dev/null | head -10',
-      'find / -name "chromium-browser" -type f -executable 2>/dev/null | head -10',
-      'find / -name "*chrome*" -type f -executable 2>/dev/null | grep -v "\.so" | head -20',
-      'ls -la /opt/render/.cache/puppeteer/ 2>/dev/null || echo "No puppeteer cache"',
-      'ls -la /opt/render/.cache/puppeteer/*/ 2>/dev/null || echo "No version directories"',
-      'which chromium-browser 2>/dev/null || echo "chromium-browser not in PATH"',
-      'which google-chrome 2>/dev/null || echo "google-chrome not in PATH"'
-    ];
-    
-    const results = {};
-    
-    for (const cmd of findCommands) {
-      try {
-        results[cmd] = execSync(cmd).toString().trim();
-      } catch (e) {
-        results[cmd] = `Error: ${e.message}`;
-      }
-    }
-    
-    // 3. Check if puppeteer's path exists
-    let puppeteerPathExists = 'Unknown';
-    try {
-      execSync(`test -x "${puppeteerPath}"`);
-      puppeteerPathExists = 'YES - exists and is executable';
-    } catch (e) {
-      puppeteerPathExists = `NO - ${e.message}`;
-    }
-    
-    res.json({
-      puppeteerExpectedPath: puppeteerPath,
-      puppeteerPathExists: puppeteerPathExists,
-      systemInfo: {
-        platform: process.platform,
-        arch: process.arch,
-        // Add any other relevant system info
-      },
-      fileSearchResults: results
-    });
-    
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// Debug endpoint to check Chrome installation
-app.get('/debug/chrome', async (req, res) => {
-  try {
-    // Check various Chrome paths
-    const pathsToCheck = [
-      '/opt/render/.cache/puppeteer/chrome/linux-*/chrome',
-      '/usr/bin/chromium-browser',
-      '/usr/bin/google-chrome',
-      '/usr/bin/chrome'
-    ];
-    
-    const results = {};
-    
-    for (const pathPattern of pathsToCheck) {
-      try {
-        if (pathPattern.includes('*')) {
-          // Use find command for wildcard paths
-          const foundPath = execSync(`find ${pathPattern.replace('*', '')} -name "chrome" -type f 2>/dev/null | head -1`).toString().trim();
-          if (foundPath) {
-            const version = execSync(`${foundPath} --version`).toString();
-            results[pathPattern] = { exists: true, path: foundPath, version: version.trim() };
-          } else {
-            results[pathPattern] = { exists: false };
-          }
-        } else {
-          const version = execSync(`${pathPattern} --version`).toString();
-          results[pathPattern] = { exists: true, version: version.trim() };
-        }
-      } catch (e) {
-        results[pathPattern] = { exists: false, error: e.message };
-      }
-    }
-    
-    res.json({
-      platform: process.platform,
-      arch: process.arch,
-      chromePaths: results,
-      puppeteerExecutablePath: puppeteer.executablePath(),
-      environment: {
-        NODE_ENV: process.env.NODE_ENV,
-        RENDER: process.env.RENDER
-      }
-    });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// Debug endpoint to test basic scraping
-app.get('/debug/test', async (req, res) => {
-  let browser;
-  try {
-    const browserConfig = getBrowserConfig();
-    browser = await puppeteer.launch(browserConfig);
-    const page = await browser.newPage();
-    
-    await page.goto('https://example.com', { waitUntil: 'domcontentloaded', timeout: 30000 });
-    const title = await page.title();
-    
-    await browser.close();
-    
-    res.json({ 
-      success: true, 
-      title,
-      message: 'Basic scraping test passed' 
-    });
-  } catch (error) {
-    if (browser) await browser.close();
-    res.status(500).json({ 
-      success: false, 
-      error: error.message,
-      suggestion: 'Check the /debug/chrome endpoint to verify Chrome installation'
-    });
-  }
 });
 
 // Main scraping endpoint
@@ -253,25 +103,16 @@ app.get('/scrape-options', async (req, res) => {
   let browser;
   try {
     const { makeId, modelId, yearId, countryId, fuelId } = req.query;
-    
-    console.log('Attempting to launch browser with configuration...');
-    const browserConfig = getBrowserConfig();
-    console.log('Browser config:', browserConfig);
-    
-    browser = await puppeteer.launch(browserConfig);
-    console.log('Browser launched successfully');
-    
+    browser = await puppeteer.launch(getBrowserConfig());
     const page = await browser.newPage();
 
     await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36');
     await page.setDefaultNavigationTimeout(120000); // 2 minutes timeout
 
-    console.log('Navigating to target website...');
     await page.goto('https://umvvs.tra.go.tz/', {
       waitUntil: 'domcontentloaded',
       timeout: 60000
     });
-    console.log('Page loaded successfully');
 
     const result = {};
 
@@ -337,16 +178,8 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`
   Server running in ${isProduction ? 'production' : 'development'} mode
   Port: ${PORT}
-  Is Render: ${isRender}
+  Puppeteer executable: ${getBrowserConfig().executablePath}
   `);
-  
-  // Log Chrome path on startup
-  try {
-    const browserConfig = getBrowserConfig();
-    console.log('Chrome executable path:', browserConfig.executablePath);
-  } catch (error) {
-    console.error('Error finding Chrome executable:', error.message);
-  }
 });
 
 // Process handlers
