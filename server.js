@@ -28,24 +28,28 @@ app.use(
 
 // Puppeteer launch configuration for Render
 
-const getBrowserConfig = () => {
-  // Use Render's provided Chrome path
-  const renderChromePath = process.env.RENDER 
-    ? '/usr/bin/chromium-browser' 
-    : puppeteer.executablePath();
+const getBrowserConfig = async () => {
+  const isRender = process.env.RENDER;
   
-  return {
-    headless: 'new',
-    args: [
-      '--no-sandbox',
-      '--disable-setuid-sandbox',
-      '--disable-dev-shm-usage',
-      '--disable-gpu',
-      '--single-process',
-      '--no-zygote'
-    ],
-    executablePath: renderChromePath
-  };
+  if (isRender) {
+    return {
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-gpu',
+        '--single-process'
+      ],
+      executablePath: '/usr/bin/chromium-browser',
+      headless: 'new'
+    };
+  } else {
+    return {
+      args: chromium.args,
+      executablePath: await chromium.executablePath,
+      headless: chromium.headless
+    };
+  }
 };
 
 // Helper functions
@@ -99,7 +103,52 @@ app.get('/scrape-options', async (req, res) => {
   let browser;
   try {
     const { makeId, modelId, yearId, countryId, fuelId } = req.query;
-    browser = await puppeteer.launch(getBrowserConfig());
+    let browser;
+try {
+  console.log('Attempting to launch browser...');
+  const browserConfig = getBrowserConfig();
+  console.log('Browser config:', browserConfig);
+  
+  browser = await puppeteer.launch(browserConfig).catch(launchError => {
+    console.error('Puppeteer launch failed:', launchError);
+    throw new Error(`Browser launch failed: ${launchError.message}`);
+  });
+  
+  console.log('Browser launched successfully');
+} catch (launchError) {
+  console.error('Browser initialization error:', launchError);
+  // Add specific handling for different error types
+  if (launchError.message.includes('Could not find browser')) {
+    console.error('Chrome executable not found at the specified path');
+    // Try alternative paths
+    const alternativePaths = [
+      '/usr/bin/chromium-browser',
+      '/usr/bin/google-chrome',
+      '/usr/bin/chrome',
+      '/opt/render/.cache/puppeteer/chrome/linux-*/chrome'
+    ];
+    
+    for (const path of alternativePaths) {
+      console.log(`Trying alternative path: ${path}`);
+      try {
+        browser = await puppeteer.launch({
+          ...getBrowserConfig(),
+          executablePath: path
+        });
+        console.log(`Success with alternative path: ${path}`);
+        break;
+      } catch (altError) {
+        console.error(`Failed with path ${path}:`, altError.message);
+      }
+    }
+    
+    if (!browser) {
+      throw new Error('All browser paths failed. Please check Chrome installation.');
+    }
+  } else {
+    throw launchError;
+  }
+}
     const page = await browser.newPage();
 
     await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36');
