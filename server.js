@@ -6,6 +6,7 @@ import cors from 'cors';
 const app = express();
 const PORT = process.env.PORT || 3000;
 const isProduction = process.env.NODE_ENV === 'production';
+const isRender = process.env.RENDER === 'true';
 
 // Middleware
 app.use(cors());
