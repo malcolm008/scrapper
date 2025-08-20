@@ -11,7 +11,7 @@ const isRender = process.env.RENDER === 'true';
 
 // Set Puppeteer configuration to use our custom cache directory
 if (isRender) {
-  process.env.PUPPETEER_CACHE_DIR = '/opt/render/project/src/.cache/puppeteer';
+  process.env.PUPPETEER_CACHE_DIR = './.cache/puppeteer';
 }
 
 // Middleware

@@ -5,10 +5,11 @@ services:
     buildCommand: 
       - export PUPPETEER_CACHE_DIR="/opt/render/project/src/.cache/puppeteer"
       - npm install
+      - npm run download-browser
     startCommand: node server.js
     envVars:
       - key: PUPPETEER_CACHE_DIR
-        value: "/opt/render/project/src/.cache/puppeteer"
+        value: "./.cache/puppeteer"
       - key: NODE_ENV
         value: production
     plan: starter
