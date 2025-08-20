@@ -18,19 +18,31 @@ app.use(
   })
 );
 
-// Firefox browser config
 const getBrowserConfig = () => {
-  return {
-    headless: true,
-    product: 'firefox', // Explicitly use Firefox
-    args: [
-      '--no-sandbox',
-      '--disable-setuid-sandbox',
-      '--disable-dev-shm-usage'
-    ],
-    // Let Puppeteer auto-detect the Firefox path
-    timeout: 60000
-  };
+  if (isRender) {
+    // On Render, use system Firefox
+    return {
+      headless: true,
+      product: 'firefox',
+      executablePath: '/usr/bin/firefox', // System Firefox path
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox'
+      ],
+      timeout: 60000
+    };
+  } else {
+    // Local development - use auto-detection
+    return {
+      headless: true,
+      product: 'firefox',
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox'
+      ],
+      timeout: 60000
+    };
+  }
 };
 
 // Helper functions
