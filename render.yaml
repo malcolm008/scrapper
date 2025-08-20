@@ -2,11 +2,13 @@ services:
   - type: web
     name: scrapper
     runtime: node
-    buildCommand: npm install
+    buildCommand: 
+      - export PUPPETEER_CACHE_DIR="/opt/render/project/src/.cache/puppeteer"
+      - npm install
     startCommand: node server.js
     envVars:
-      - key: PUPPETEER_SKIP_CHROMIUM_DOWNLOAD
-        value: "false"  # This is correct - it ensures Chrome is downloaded
+      - key: PUPPETEER_CACHE_DIR
+        value: "/opt/render/project/src/.cache/puppeteer"
       - key: NODE_ENV
         value: production
     plan: starter

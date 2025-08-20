@@ -2,11 +2,17 @@ import express from 'express';
 import puppeteer from 'puppeteer';
 import rateLimit from 'express-rate-limit';
 import cors from 'cors';
+import { execSync } from 'child_process';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 const isProduction = process.env.NODE_ENV === 'production';
 const isRender = process.env.RENDER === 'true';
+
+// Set Puppeteer configuration to use our custom cache directory
+if (isRender) {
+  process.env.PUPPETEER_CACHE_DIR = '/opt/render/project/src/.cache/puppeteer';
+}
 
 // Middleware
 app.use(cors());
@@ -19,32 +25,43 @@ app.use(
   })
 );
 
+// Simple browser config - let Puppeteer handle everything!
 const getBrowserConfig = () => {
-  if (isRender) {
-    // On Render, use system Firefox
-    return {
-      headless: true,
-      product: 'firefox',
-      executablePath: '/usr/bin/firefox', // System Firefox path
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox'
-      ],
-      timeout: 60000
-    };
-  } else {
-    // Local development - use auto-detection
-    return {
-      headless: true,
-      product: 'firefox',
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox'
-      ],
-      timeout: 60000
-    };
-  }
+  return {
+    headless: 'new',
+    args: [
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+      '--disable-dev-shm-usage',
+      '--single-process'
+    ]
+    // NO executablePath - let Puppeteer auto-detect it!
+  };
 };
+
+// Debug endpoint to check cache directory
+app.get('/debug/cache', async (req, res) => {
+  try {
+    const cacheDir = process.env.PUPPETEER_CACHE_DIR || 'Using default cache';
+    const cacheExists = execSync(`test -d "${cacheDir}" && echo "Exists" || echo "Does not exist"`).toString().trim();
+    
+    const cacheContents = execSync(`find "${cacheDir}" -type f 2>/dev/null | head -10 || echo "No cache directory"`).toString().trim();
+    
+    res.json({
+      puppeteerCacheDir: cacheDir,
+      cacheExists,
+      cacheContents,
+      executablePath: puppeteer.executablePath(),
+      environment: {
+        PUPPETEER_CACHE_DIR: process.env.PUPPETEER_CACHE_DIR,
+        HOME: process.env.HOME,
+        NODE_ENV: process.env.NODE_ENV
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
 
 // Helper functions
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
@@ -93,25 +110,6 @@ app.get('/health', (req, res) => {
   });
 });
 
-// Debug endpoint to check Firefox installation
-app.get('/debug/firefox', async (req, res) => {
-  try {
-    const executablePath = puppeteer.executablePath();
-    
-    res.json({
-      executablePath,
-      product: puppeteer.product,
-      defaultArgs: puppeteer.defaultArgs(),
-      environment: {
-        PUPPETEER_PRODUCT: process.env.PUPPETEER_PRODUCT,
-        PUPPETEER_FIREFOX_SKIP_DOWNLOAD: process.env.PUPPETEER_FIREFOX_SKIP_DOWNLOAD,
-        PUPPETEER_SKIP_CHROMIUM_DOWNLOAD: process.env.PUPPETEER_SKIP_CHROMIUM_DOWNLOAD
-      }
-    });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
 
 // Main scraping endpoint
 app.get('/scrape-options', async (req, res) => {
@@ -197,11 +195,9 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`
   Server running in ${isProduction ? 'production' : 'development'} mode
   Port: ${PORT}
-  Browser: Firefox
   `);
   
-  // Log Puppeteer configuration
-  console.log('Puppeteer product:', puppeteer.product);
+  console.log('Puppeteer cache directory:', process.env.PUPPETEER_CACHE_DIR || 'Default');
   console.log('Puppeteer executable path:', puppeteer.executablePath());
 });
 
