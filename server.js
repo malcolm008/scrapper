@@ -28,28 +28,16 @@ app.use(
 
 // Puppeteer launch configuration for Render
 
-const getBrowserConfig = async () => {
-  const isRender = process.env.RENDER;
-  
-  if (isRender) {
-    return {
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-gpu',
-        '--single-process'
-      ],
-      executablePath: '/usr/bin/chromium-browser',
-      headless: 'new'
-    };
-  } else {
-    return {
-      args: chromium.args,
-      executablePath: await chromium.executablePath,
-      headless: chromium.headless
-    };
-  }
+const getBrowserConfig = () => {
+  return {
+    headless: true,
+    product: 'firefox', // Use Firefox instead of Chrome
+    args: [
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+    ],
+    timeout: 60000
+  };
 };
 
 // Helper functions
